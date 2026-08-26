@@ -32,6 +32,7 @@ def test_trainer_reduces_loss_on_repeated_pattern(tmp_path: Path) -> None:
     assert metadata["numpy_version"] == np.__version__
     assert metadata["torch_version"] == torch.__version__
     assert metadata["git_commit"]
+    assert metadata["hardware"]
 
 
 def test_trainer_stops_on_non_finite_loss(tmp_path: Path) -> None:

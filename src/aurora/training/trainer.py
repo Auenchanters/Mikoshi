@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import platform
 import subprocess
 import sys
@@ -51,6 +52,25 @@ def _git_commit() -> str | None:
         text=True,
     )
     return completed.stdout.strip() if completed.returncode == 0 else None
+
+
+def _cpu_hardware() -> str:
+    reported_name = platform.processor() or platform.machine()
+    if reported_name:
+        return reported_name
+    capability = next(
+        (
+            line.split(":", maxsplit=1)[1].strip()
+            for line in torch.__config__.show().splitlines()
+            if "CPU capability usage:" in line
+        ),
+        "capability unavailable",
+    )
+    logical_cores = os.cpu_count()
+    core_description = (
+        f"{logical_cores} logical cores" if logical_cores is not None else "core count unavailable"
+    )
+    return f"CPU ({core_description}; {capability})"
 
 
 class Trainer:
@@ -319,7 +339,7 @@ class Trainer:
             "hardware": (
                 torch.cuda.get_device_name(self.device)
                 if self.device.type == "cuda"
-                else platform.processor() or platform.machine()
+                else _cpu_hardware()
             ),
             "numpy_version": np.__version__,
             "platform": platform.platform(),
