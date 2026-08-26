@@ -82,3 +82,58 @@
 - **Interpretation:** single-device trajectory state is complete. CUDA/bf16 and
   distributed determinism remain unverified on this CPU-only host.
 - **Hypothesis survives:** yes for CPU fp32.
+
+## DEC-0005 — Fixed-loop prelude/shared-core/coda before adaptive recurrence
+
+- **Status:** accepted as the Task 05 reference architecture; no performance
+  claim.
+- **Hypothesis:** a fixed prelude, one repeatedly invoked core object, and fixed
+  coda can provide a numerically valid recurrent control whose parameter count
+  is independent of loop count.
+- **Implementation:** one prelude block, one shared core block, one coda block,
+  and a learned `[8, d_model]` step-embedding table. Configured iteration counts
+  are restricted to 1, 2, 4, or 8. No core copies, adaptive halting, anchors,
+  gates, scratch state, memory, EAC, routing, randomized depth, or stability
+  regularization are present.
+- **Scale choice:** the configurable implementation supports positive counts per
+  stage, but the CPU-safe Task 05 sweep uses 1/1/1 rather than the plan's later
+  2/2/1–2 science-model suggestion. This keeps the run cheap and is not a claim
+  that 1/1/1 is the preferred research architecture.
+- **Control/baseline:** the Tasks 01–04 `DenseTransformer` and its B0 model/data/
+  optimizer/scheduler/runtime settings remain unchanged.
+- **Metric:** exact R=1 expansion, finite nonzero prelude/core/coda gradients,
+  retained-state gradients through R=4, repeated-core hook identity, parameter
+  IDs/storage pointers, optimizer uniqueness, state-dict/parameter invariance,
+  CPU fp32 determinism, and diagnostic noninterference.
+- **Expected result:** all structural and numerical gates pass; training loss
+  decreases at each fixed depth.
+- **Actual result:** all gates passed in the 66-test suite. R=1/2/4/8 each had
+  91,152 trainable parameters and identical state-dict key sets. All four tiny
+  recurrent runs decreased training loss and reproduced their saved model and
+  evaluation loss exactly after fresh CPU fp32 checkpoint reload.
+- **Interpretation:** the fixed-loop implementation is a valid engineering
+  control for recurrence. It does not establish a recurrence benefit.
+- **Hypothesis survives:** yes as an implementation/control hypothesis only.
+
+## DEC-0006 — Compare recurrence beside compute, not by raw loss alone
+
+- **Status:** accepted.
+- **Hypothesis:** fixed-loop results are interpretable only when parameter count,
+  active FLOPs/token, throughput, and training compute are shown beside loss.
+- **Implementation:** use the existing matmul-only FLOP convention with active
+  blocks `prelude + coda + iterations × core`; report loss decrease per training
+  GFLOP only as a descriptive quantity.
+- **Control/baseline:** B0 has 65,328 parameters and 142,464 active FLOPs/token.
+  Task 05 recurrent models have 91,152 parameters at every tested depth and
+  199,296–597,120 active FLOPs/token.
+- **Actual result:** R=1 produced the lowest raw evaluation loss (3.7306981683),
+  but used 1.395× the B0 parameters and 1.399× the active FLOPs/token. R=2/4/8
+  used progressively more compute and produced evaluation losses 3.8169981837,
+  4.0504400730, and 4.1997586489. Loss decrease per training GFLOP declined
+  from 0.8795720809 for B0 to 0.1584378633 for R=8.
+- **Interpretation:** no recurrent configuration demonstrated a controlled
+  advantage over B0 because neither parameter nor FLOP matching was performed.
+  The single-seed repeated-corpus run is an engineering diagnostic, not a model
+  comparison.
+- **Hypothesis survives:** yes; all future claims require matched controls and
+  multiple seeds.

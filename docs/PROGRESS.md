@@ -2,7 +2,8 @@
 
 ## Current phase
 
-Tasks 01–04 from `plan.md` are implemented and verified on the feature branch.
+Tasks 01–05 from `plan.md` are implemented and verified on the Task 05 feature
+branch.
 
 ### Task 01 — Repository skeleton and configuration
 
@@ -39,20 +40,41 @@ Tasks 01–04 from `plan.md` are implemented and verified on the feature branch.
 - exact uninterrupted-versus-resumed CPU fp32 replay;
 - complete offline integration and production-BPE tiny experiment.
 
+### Task 05 — Fixed-loop recurrent prelude/core/coda
+
+- separate recurrent configuration path with fixed counts 1, 2, 4, and 8;
+- one fixed prelude stage, one repeatedly invoked shared core object, one fixed
+  coda stage, and fixed-size recurrent-step embeddings;
+- exact R=1 expanded-path logits/loss and finite nonzero prelude/core/coda
+  gradients on deterministic CPU fp32;
+- hook-observed core object identity, stable parameter IDs/storage pointers,
+  unique optimizer membership, and R=1/2/4/8 parameter/state-key invariance;
+- finite nonzero gradients through every retained state in an R=4 trajectory;
+- bitwise deterministic recurrent states, logits, and loss on repeated CPU fp32
+  forwards;
+- output-neutral per-iteration state diagnostics and pre-clip core-gradient
+  statistics;
+- production-BPE B0/R1/R2/R4/R8 controlled sweep with exact checkpoint reload.
+
 ## Verification snapshot
 
 - Ruff formatter: clean
 - Ruff linter: clean
 - mypy: clean across `src`
-- pytest: 41 passed
+- pytest: 66 passed
 - `EXP-0001-dense-sanity`: loss 5.7461218834 → 3.8214008808
+- Task 05 B0: loss 5.7461218834 → 3.8214008808, eval 3.7949758768
+- Task 05 R=1/2/4/8: all training losses decreased; evaluation losses were
+  3.7306981683 / 3.8169981837 / 4.0504400730 / 4.1997586489
+- R=1/2/4/8: identical 91,152 parameter counts and state-dict key sets
 - fresh checkpoint reload and exact replay: verified
 - unexplained NaN/Inf: none observed
 
 ## Deliberately deferred
 
-- recurrent prelude/core/coda architecture;
-- recurrence instrumentation and stability experiments;
+- broader Task 06 recurrence analysis/instrumentation beyond the mandatory Task
+  05 norm/update/cosine and core-gradient observations;
+- recurrence-stability experiments and regularization;
 - scratch/state highways;
 - persistent neural memory;
 - Experience-Adaptive Compute and learned halting;
@@ -61,10 +83,8 @@ Tasks 01–04 from `plan.md` are implemented and verified on the feature branch.
 - Triton/CUDA kernels;
 - large training runs.
 
-## Next phase: Task 05
+## Stopping boundary
 
-Task 05 will add a recurrent prelude/core/coda model with externally fixed loop
-counts, while preserving this dense model unchanged as the control. It will not
-add neural memory, EAC, or learned halting. The first comparisons must be
-parameter- and FLOP-aware and must retain the existing checkpoint/test
-contracts.
+Task 05 is complete. Task 06 has not started. No adaptive halting, neural
+memory, EAC, routing, STARS/JSRR, randomized depth, scratch/state highway, or
+other later-plan mechanism was implemented.
