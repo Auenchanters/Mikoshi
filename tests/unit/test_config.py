@@ -41,7 +41,7 @@ def test_unknown_nested_config_key_is_rejected(tmp_path: Path) -> None:
     path = tmp_path / "bad.yaml"
     write_config(path, tiny_config_dict(model={"mystery_width": 12}))
 
-    with pytest.raises(ConfigError, match="model.*mystery_width"):
+    with pytest.raises(ConfigError, match=r"model.*mystery_width"):
         ExperimentConfig.from_yaml(path)
 
 
@@ -52,7 +52,7 @@ def test_invalid_grouped_query_attention_shape_is_rejected(tmp_path: Path) -> No
         tiny_config_dict(model={"d_model": 30, "num_heads": 3, "num_kv_heads": 2}),
     )
 
-    with pytest.raises(ConfigError, match="num_heads.*num_kv_heads"):
+    with pytest.raises(ConfigError, match=r"num_heads.*num_kv_heads"):
         ExperimentConfig.from_yaml(path)
 
 
@@ -60,5 +60,5 @@ def test_byte_tokenizer_cannot_be_selected_in_production_config(tmp_path: Path) 
     path = tmp_path / "bad.yaml"
     write_config(path, tiny_config_dict(tokenizer={"kind": "byte"}))
 
-    with pytest.raises(ConfigError, match="tokenizer.kind must be 'bpe'"):
+    with pytest.raises(ConfigError, match=r"tokenizer\.kind must be 'bpe'"):
         ExperimentConfig.from_yaml(path)
