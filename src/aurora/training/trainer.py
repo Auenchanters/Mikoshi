@@ -20,7 +20,9 @@ from aurora.config import ExperimentConfig
 from aurora.data.dataset import TokenBlockDataset
 from aurora.data.sampler import DeterministicBatchSampler
 from aurora.experiment import RunArtifacts, append_jsonl
+from aurora.model.recurrent import FixedLoopRecurrentTransformer
 from aurora.model.transformer import DenseTransformer
+from aurora.recurrent_config import RecurrentExperimentConfig
 from aurora.tokenization.base import TokenizerIdentity
 from aurora.training.checkpoint import TrainingState, load_checkpoint, save_checkpoint
 from aurora.training.metrics import count_parameters, estimate_transformer_flops
@@ -74,18 +76,24 @@ def _cpu_hardware() -> str:
 
 
 class Trainer:
-    """Correctness-first single-device trainer for the dense control model."""
+    """Correctness-first single-device trainer for supported causal LMs."""
 
     def __init__(
         self,
         *,
-        config: ExperimentConfig,
-        model: DenseTransformer,
+        config: ExperimentConfig | RecurrentExperimentConfig,
+        model: DenseTransformer | FixedLoopRecurrentTransformer,
         tokenizer_identity: TokenizerIdentity,
         train_dataset: TokenBlockDataset,
         eval_dataset: TokenBlockDataset,
         run: RunArtifacts,
     ) -> None:
+        recurrent_pair = isinstance(config, RecurrentExperimentConfig) and isinstance(
+            model, FixedLoopRecurrentTransformer
+        )
+        dense_pair = isinstance(config, ExperimentConfig) and isinstance(model, DenseTransformer)
+        if not (recurrent_pair or dense_pair):
+            raise TypeError("trainer configuration and model architecture must match")
         self.config = config
         self.model = model
         self.tokenizer_identity = tokenizer_identity
@@ -176,6 +184,8 @@ class Trainer:
         return float(value.detach().item())
 
     def train(self, max_steps: int | None = None) -> TrainingResult:
+        if not isinstance(self.config, ExperimentConfig):
+            raise TypeError("recurrent configurations require RecurrentTrainer")
         target_step = self.config.scheduler.total_steps if max_steps is None else max_steps
         if not self.step < target_step <= self.config.scheduler.total_steps:
             raise ValueError("max_steps must be greater than current step and at most total_steps")
