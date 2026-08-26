@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from aurora.config import ModelConfig
+
 
 def tiny_config_dict(**overrides: dict[str, Any]) -> dict[str, Any]:
     config: dict[str, Any] = {
@@ -63,3 +65,22 @@ def tiny_config_dict(**overrides: dict[str, Any]) -> dict[str, Any]:
         else:
             config[section].update(values)
     return config
+
+
+def model_config(**overrides: Any) -> ModelConfig:
+    values: dict[str, Any] = {
+        "vocab_size": 64,
+        "max_seq_len": 16,
+        "d_model": 32,
+        "num_layers": 2,
+        "num_heads": 4,
+        "num_kv_heads": 2,
+        "d_ff": 64,
+        "dropout": 0.0,
+        "rope_base": 10_000.0,
+        "qk_norm": True,
+        "tie_embeddings": True,
+        "norm_eps": 1e-6,
+    }
+    values.update(overrides)
+    return ModelConfig(**values)
