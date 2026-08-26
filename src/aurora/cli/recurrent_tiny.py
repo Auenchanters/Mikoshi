@@ -23,7 +23,7 @@ from aurora.training.reproducibility import seed_everything
 
 
 def _dataset_hash(train_text: str, eval_text: str) -> str:
-    digest = hashlib.sha256(b"AURORA-TASK05-DATASET-v1\0")
+    digest = hashlib.sha256(b"AURORA-TINY-DATASET-v1\0")
     for text in (train_text, eval_text):
         encoded = text.replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")
         digest.update(len(encoded).to_bytes(8, byteorder="big"))

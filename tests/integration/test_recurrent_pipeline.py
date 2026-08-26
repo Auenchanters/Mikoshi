@@ -3,10 +3,23 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from aurora.cli.recurrent_tiny import (
+    _dataset_hash as recurrent_dataset_hash,
+)
 from aurora.cli.recurrent_tiny import run_recurrent_pipeline
+from aurora.cli.tiny import _dataset_hash as dense_dataset_hash
 from aurora.experiment import create_run
 from tests.fixtures.byte_tokenizer import ByteTokenizer
 from tests.recurrent_helpers import recurrent_experiment_config
+
+
+def test_dense_and_recurrent_runs_use_the_same_dataset_identity() -> None:
+    train_text = "identical training corpus\n"
+    eval_text = "identical evaluation corpus\n"
+
+    assert recurrent_dataset_hash(train_text, eval_text) == dense_dataset_hash(
+        train_text, eval_text
+    )
 
 
 def test_recurrent_pipeline_trains_evaluates_reloads_and_records_diagnostics(
