@@ -13,7 +13,7 @@ def test_every_iteration_invokes_the_same_core_object_and_parameters() -> None:
     model = FixedLoopRecurrentTransformer(recurrent_model_config(num_iterations=4)).eval()
     calls: list[nn.Module] = []
     parameter_locations = {
-        name: (id(parameter), parameter.data_ptr())
+        name: (id(parameter), parameter.data_ptr(), parameter.untyped_storage().data_ptr())
         for name, parameter in model.core.named_parameters()
     }
     handle = model.core.register_forward_hook(lambda module, _inputs, _output: calls.append(module))
@@ -26,7 +26,7 @@ def test_every_iteration_invokes_the_same_core_object_and_parameters() -> None:
     assert len(calls) == 4
     assert all(module is model.core for module in calls)
     assert parameter_locations == {
-        name: (id(parameter), parameter.data_ptr())
+        name: (id(parameter), parameter.data_ptr(), parameter.untyped_storage().data_ptr())
         for name, parameter in model.core.named_parameters()
     }
 
