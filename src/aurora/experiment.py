@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from aurora.config import ExperimentConfig
+from aurora.recurrent_config import RecurrentExperimentConfig
 
 
 @dataclass(frozen=True)
@@ -19,7 +20,7 @@ class RunArtifacts:
     result_path: Path
 
 
-def create_run(config: ExperimentConfig, root: Path) -> RunArtifacts:
+def create_run(config: ExperimentConfig | RecurrentExperimentConfig, root: Path) -> RunArtifacts:
     root.mkdir(parents=True, exist_ok=True)
     run_root = root / config.experiment.run_id
     run_root.mkdir(exist_ok=False)

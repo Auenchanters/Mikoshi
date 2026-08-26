@@ -39,6 +39,7 @@ def recurrent_experiment_config(
             "dataset_version": "test-pattern-v1",
         },
         data={"sequence_length": 8, "batch_size": 2, "stride": 4},
+        optimizer={"learning_rate": 0.01, "weight_decay": 0.0},
         scheduler={"warmup_steps": 0, "total_steps": total_steps, "min_lr_ratio": 0.2},
         checkpoint={"save_every": total_steps, "keep_last": 1},
     )
