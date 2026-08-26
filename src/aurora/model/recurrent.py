@@ -7,6 +7,10 @@ import torch.nn.functional as functional
 from torch import Tensor, nn
 
 from aurora.model.norms import RMSNorm
+from aurora.model.recurrent_diagnostics import (
+    RecurrentStateDiagnostics,
+    measure_recurrent_state,
+)
 from aurora.model.transformer import DecoderBlock, DenseTransformer
 from aurora.recurrent_config import RecurrentModelConfig
 
@@ -15,6 +19,8 @@ from aurora.recurrent_config import RecurrentModelConfig
 class RecurrentLMOutput:
     logits: Tensor
     loss: Tensor | None
+    iteration_diagnostics: tuple[RecurrentStateDiagnostics, ...] = ()
+    recurrent_states: tuple[Tensor, ...] = ()
 
 
 class TransformerStage(nn.Module):
@@ -79,12 +85,28 @@ class FixedLoopRecurrentTransformer(nn.Module):
             if targets.dtype != torch.long:
                 raise ValueError("targets must use torch.long token IDs")
 
-    def forward(self, input_ids: Tensor, targets: Tensor | None = None) -> RecurrentLMOutput:
+    def forward(
+        self,
+        input_ids: Tensor,
+        targets: Tensor | None = None,
+        *,
+        collect_diagnostics: bool = False,
+        retain_iteration_states: bool = False,
+    ) -> RecurrentLMOutput:
         self._validate_inputs(input_ids, targets)
         hidden = self.embedding_dropout(self.token_embedding(input_ids))
         hidden = self.prelude(hidden)
+        diagnostics: list[RecurrentStateDiagnostics] = []
+        recurrent_states = [hidden] if retain_iteration_states else []
         for iteration in range(self.config.num_iterations):
-            hidden = self.core(hidden, iteration=iteration)
+            previous = hidden
+            hidden = self.core(previous, iteration=iteration)
+            if collect_diagnostics:
+                diagnostics.append(
+                    measure_recurrent_state(previous, hidden, iteration=iteration + 1)
+                )
+            if retain_iteration_states:
+                recurrent_states.append(hidden)
         hidden = self.coda(hidden)
         logits = self.lm_head(self.final_norm(hidden))
         loss = None
@@ -93,7 +115,12 @@ class FixedLoopRecurrentTransformer(nn.Module):
                 logits.float().reshape(-1, self.config.vocab_size),
                 targets.reshape(-1),
             )
-        return RecurrentLMOutput(logits=logits, loss=loss)
+        return RecurrentLMOutput(
+            logits=logits,
+            loss=loss,
+            iteration_diagnostics=tuple(diagnostics),
+            recurrent_states=tuple(recurrent_states),
+        )
 
     @torch.no_grad()
     def generate(
