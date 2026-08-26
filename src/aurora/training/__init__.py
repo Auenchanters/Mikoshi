@@ -7,9 +7,13 @@ from aurora.training.reproducibility import (
     restore_rng_state,
     seed_everything,
 )
+from aurora.training.trainer import EvaluationResult, Trainer, TrainingResult
 
 __all__ = [
+    "EvaluationResult",
     "ParameterCounts",
+    "Trainer",
+    "TrainingResult",
     "TrainingState",
     "capture_rng_state",
     "count_parameters",
