@@ -141,3 +141,107 @@
   R=1 raw loss must not be described as beating B0.
 - **Hypothesis survives:** yes; all future claims require matched controls and
   multiple seeds.
+
+## DEC-0007 — Test minimal recurrent-state controls independently
+
+- **Status:** accepted as the Task 06 controlled diagnostic design; results are
+  mixed and do not support a model-quality claim.
+- **Hypothesis:** three deliberately small controls may mitigate distinct parts
+  of the frozen Task 05 R=4/R=8 failure pattern: directional drift, unconstrained
+  update size, and RMS growth.
+- **S1 projected additive anchor:** preserve the immutable prelude output `h0`
+  and add one bias-free `d_model -> d_model` projection of it to the recurrent
+  state before every call to the same shared core. This adds 2,304 parameters
+  and 18,432/36,864 active FLOPs/token at R=4/R=8.
+- **S2 scalar interpolation gate:** compute one sigmoid scalar per token from an
+  affine projection of `[h_t; proposal_t]`, then form
+  `(1-g_t)h_t + g_t proposal_t`. The gate controls interpolation only; it never
+  halts execution. This adds 97 parameters and 768/1,536 active FLOPs/token at
+  R=4/R=8 under the matmul-only convention.
+- **S3 initial-RMS stabilizer:** after the core proposal, rescale each token's
+  candidate so its hidden-dimension RMS equals that token's initial-state RMS,
+  using a clamped denominator. It adds no parameters or charged matmul FLOPs.
+- **S4 composition:** combine only the already-tested S1 anchor and S2 gate, in
+  anchor -> shared core -> gate order, with no stabilizer. This adds 2,401
+  parameters and 19,200/38,400 active FLOPs/token at R=4/R=8.
+- **Rejected complexity for this task:** learned or gated anchors,
+  vector/channel-wise or depth-specific gates, learned normalization,
+  combinations involving S3, randomized training depth, adaptive halting,
+  routing, scratch/state highways, Jacobian/STARS regularization, persistent
+  memory, EAC, tokenizer-free modeling, and custom CUDA/Triton kernels. These
+  alternatives would confound the independent mechanism comparison or cross
+  into Task 07+.
+- **Controls:** S0 is the exact delegated Task 05 path when every mechanism is
+  disabled; frozen Task 05 R=4/R=8 artifacts were not rerun or edited. All new
+  runs retained seed 17, CPU fp32, production tokenizer/corpus, 40 steps, 5,120
+  tokens, data order, optimizer, scheduler, batch, and context.
+- **Actual stability result:** relative to depth-matched S0, every Task 06 run
+  had lower final hidden RMS. S1/S2/S4 increased final cosine to `h0` at both
+  depths; S3 decreased it at R=4 and increased it at R=8. S3 held its RMS
+  essentially constant across iterations by construction. No S2/S4 gate
+  collapsed under the predeclared 0.05/0.95 thresholds.
+- **Actual loss result:** R=4 evaluation losses for S1/S2/S3/S4 were
+  3.8888302743 / 3.8293781579 / 4.2306061983 / 3.7531955242; R=8 losses were
+  3.9617625475 / 4.0581546426 / 4.2106192112 / 3.9005704820. These are raw
+  outcomes beside unequal parameter/compute costs, not improvement claims.
+- **Interpretation:** projected anchoring and scalar interpolation are useful
+  minimal controls because they measurably change the targeted state
+  diagnostics without gate collapse. The parameter-free RMS constraint controls
+  magnitude but did not improve directional alignment at R=4 or raw loss.
+  Successive-state cosines still approached one, so no mechanism demonstrated
+  prevention of state convergence.
+- **Hypothesis survives:** partially as a diagnostic hypothesis. RMS control and
+  some directional-drift reduction were observed; broader stability and
+  model-quality benefits were not established.
+
+## DEC-0008 — Predeclare checkpoint selection and keep cross-depth diagnostic-only
+
+- **Status:** accepted and executed once.
+- **Selection rule:** among S1–S4 R=4 runs with finite diagnostics and both a
+  lower final hidden RMS and a higher final cosine to `h0` than frozen S0 R=4,
+  choose the lowest evaluation loss. If no candidate qualifies, choose the
+  lowest finite evaluation loss and mark the stability filter unmet.
+- **Frozen inputs:** S0 R=4 final hidden RMS was 0.3238864541 and cosine to `h0`
+  was 0.6662002206.
+- **Selection result:** S1, S2, and S4 met both conditions; S3 failed the cosine
+  condition. The filter was met, and S4 R=4 was selected with evaluation loss
+  3.7531955242, final RMS 0.1380776316, and cosine to `h0` 0.8797061443.
+- **Identity:** source run `EXP-0644-anchor-gate-r4`, config SHA-256
+  `c50c114a331438b94c3b811690dcd4a9d12bdb7cc5e8e2b66394ef56f13efeaf`,
+  checkpoint SHA-256
+  `c94cb3d3386c251285432cfad36f0fd1b787c246f30b6f308f64eb1789760bee`.
+  The exact checkpoint was evaluated at R=1/2/3/4/6/8 with no optimizer,
+  weight update, configured-training-depth mutation, or randomized depth.
+- **Cross-depth result:** evaluation losses were 3.8521460295 / 3.7836607397 /
+  3.7593515813 / 3.7531955242 / 3.7674068511 / 3.7994184196. All state and gate
+  diagnostics were finite, and no gate collapsed. The trained depth R=4 was the
+  minimum; beyond it, loss and RMS rose while cosine to `h0` fell.
+- **Research answer — drift:** S1/S2/S4 reduced final directional drift at both
+  trained depths; S3 was mixed across depths.
+- **Research answer — RMS growth:** every mechanism reduced final RMS versus
+  depth-matched S0, and S3 enforced constant RMS, but lower RMS alone did not
+  imply lower loss.
+- **Research answer — successive-state convergence:** no mechanism prevented
+  near-collinearity. At R=4 all final successive-state cosines were slightly
+  higher than S0; at R=8 S3 reduced the value most but still reached
+  0.9954776764.
+- **Research answer — deeper validation:** S1/S2/S4 had lower raw R=8 losses
+  than S0 R=8 and S3 had a higher one, but unequal compute/parameters prevent an
+  improvement claim. Except S3, each separately trained R=8 variant was worse
+  than its R=4 counterpart.
+- **Research answer — transfer:** the one selected S4/4 checkpoint remained
+  finite and noncollapsed at R=6/R=8, but its best loss occurred at training
+  depth and diagnostics continued to drift. Transfer is partial in this one
+  diagnostic and not established generally.
+- **Limitations:** one seed; tiny 91K–94K models; 5,120 training tokens; repeated
+  generated corpus and same-family evaluation; separately trained depth rows;
+  unmatched parameters and active compute; matmul-only FLOPs that omit
+  elementwise mechanism costs; CPU peak VRAM unavailable; host-dependent
+  throughput; selection using the same R=4 evaluation set after a predeclared
+  filter; cross-depth analysis of only one checkpoint; no significance test,
+  independent corpus, large-scale, GPU, downstream-reasoning, or multi-seed
+  evidence.
+- **Conclusion boundary:** this is engineering evidence about measurable state
+  controls, not evidence that recurrence is superior, that language modeling
+  improved under matched conditions, or that AURORA is successful. Research
+  Task 07 has not started.
