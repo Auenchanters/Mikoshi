@@ -43,9 +43,7 @@ def test_s2_records_detached_gate_statistics_and_collapse_label(
         model.gated_update.projection.weight.zero_()
         model.gated_update.projection.bias.fill_(bias)
 
-    output = model(
-        torch.tensor([[1, 4, 7, 3]], dtype=torch.long), collect_diagnostics=True
-    )
+    output = model(torch.tensor([[1, 4, 7, 3]], dtype=torch.long), collect_diagnostics=True)
 
     expected_gate = torch.sigmoid(torch.tensor(bias)).item()
     assert len(output.gate_diagnostics) == 2

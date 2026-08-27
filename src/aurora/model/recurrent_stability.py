@@ -54,9 +54,9 @@ class InitialRMSStabilizer(nn.Module):
         maximum = fp32_tensor.abs().amax(dim=-1, keepdim=True)
         denominator = torch.where(maximum > 0.0, maximum, torch.ones_like(maximum))
         normalized = fp32_tensor / denominator
-        normalized_rms = torch.linalg.vector_norm(
-            normalized, dim=-1, keepdim=True
-        ) / tensor.shape[-1] ** 0.5
+        normalized_rms = (
+            torch.linalg.vector_norm(normalized, dim=-1, keepdim=True) / tensor.shape[-1] ** 0.5
+        )
         return denominator * normalized_rms
 
 

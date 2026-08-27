@@ -9,9 +9,11 @@ from tests.stability_helpers import stability_model_config
 
 def test_s2_cpu_replay_exactly_matches_gate_diagnostics() -> None:
     seed_everything(47, deterministic=True)
-    model = ControlledRecurrentTransformer(
-        stability_model_config(num_iterations=4, gated_update=True)
-    ).cpu().eval()
+    model = (
+        ControlledRecurrentTransformer(stability_model_config(num_iterations=4, gated_update=True))
+        .cpu()
+        .eval()
+    )
     input_ids = torch.randint(0, 64, (2, 8), dtype=torch.long)
     targets = torch.randint(0, 64, (2, 8), dtype=torch.long)
 
@@ -41,9 +43,11 @@ def test_s2_cpu_replay_exactly_matches_gate_diagnostics() -> None:
 
 def test_s2_gate_diagnostics_do_not_change_outputs() -> None:
     seed_everything(53, deterministic=True)
-    model = ControlledRecurrentTransformer(
-        stability_model_config(num_iterations=4, gated_update=True)
-    ).cpu().eval()
+    model = (
+        ControlledRecurrentTransformer(stability_model_config(num_iterations=4, gated_update=True))
+        .cpu()
+        .eval()
+    )
     input_ids = torch.randint(0, 64, (2, 8), dtype=torch.long)
     targets = torch.randint(0, 64, (2, 8), dtype=torch.long)
 

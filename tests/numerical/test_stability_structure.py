@@ -46,9 +46,7 @@ def test_s3_applies_stabilization_after_each_core_proposal() -> None:
     stabilizer_inputs: list[tuple[Tensor, Tensor]] = []
     stabilizer_outputs: list[Tensor] = []
 
-    def record_core(
-        _module: nn.Module, inputs: tuple[Tensor, ...], output: Tensor
-    ) -> None:
+    def record_core(_module: nn.Module, inputs: tuple[Tensor, ...], output: Tensor) -> None:
         events.append("core")
         core_inputs.append(inputs[0])
         core_outputs.append(output)
@@ -90,9 +88,10 @@ def test_s3_applies_stabilization_after_each_core_proposal() -> None:
             stabilizer_outputs[:-1], core_inputs[1:], strict=True
         )
     )
-    initial_rms = torch.linalg.vector_norm(
-        output.recurrent_states[0].float(), dim=-1
-    ) / model.config.d_model**0.5
+    initial_rms = (
+        torch.linalg.vector_norm(output.recurrent_states[0].float(), dim=-1)
+        / model.config.d_model**0.5
+    )
     for state in output.recurrent_states[1:]:
         state_rms = torch.linalg.vector_norm(state.float(), dim=-1) / model.config.d_model**0.5
         assert torch.allclose(state_rms, initial_rms, atol=1e-5, rtol=1e-5)
@@ -108,9 +107,7 @@ def test_s4_composes_anchor_core_gate_without_stabilization() -> None:
     gate_inputs: list[tuple[Tensor, Tensor]] = []
     gate_outputs: list[tuple[Tensor, Tensor]] = []
 
-    def record_anchor(
-        _module: nn.Module, inputs: tuple[Tensor, Tensor], output: Tensor
-    ) -> None:
+    def record_anchor(_module: nn.Module, inputs: tuple[Tensor, Tensor], output: Tensor) -> None:
         events.append("anchor")
         anchor_inputs.append(inputs)
         anchor_outputs.append(output)
@@ -119,9 +116,7 @@ def test_s4_composes_anchor_core_gate_without_stabilization() -> None:
         events.append("core")
         core_inputs.append(inputs[0])
 
-    def record_core_output(
-        _module: nn.Module, _inputs: tuple[Tensor, ...], output: Tensor
-    ) -> None:
+    def record_core_output(_module: nn.Module, _inputs: tuple[Tensor, ...], output: Tensor) -> None:
         core_outputs.append(output)
 
     def record_gate(
@@ -166,9 +161,7 @@ def test_s4_composes_anchor_core_gate_without_stabilization() -> None:
     )
     assert all(
         gate_output[0] is retained
-        for gate_output, retained in zip(
-            gate_outputs, output.recurrent_states[1:], strict=True
-        )
+        for gate_output, retained in zip(gate_outputs, output.recurrent_states[1:], strict=True)
     )
     assert all(
         anchor_input[1] is retained_previous
@@ -178,9 +171,7 @@ def test_s4_composes_anchor_core_gate_without_stabilization() -> None:
     )
     assert all(
         gate_output[0] is next_anchor_input[1]
-        for gate_output, next_anchor_input in zip(
-            gate_outputs[:-1], anchor_inputs[1:], strict=True
-        )
+        for gate_output, next_anchor_input in zip(gate_outputs[:-1], anchor_inputs[1:], strict=True)
     )
 
 
@@ -225,9 +216,7 @@ def test_one_shared_core_object_and_storage_are_reused_each_iteration(
     finally:
         hook.remove()
 
-    assert observations == [
-        (id(core), expected_parameter_ids, expected_storage_pointers)
-    ] * depth
+    assert observations == [(id(core), expected_parameter_ids, expected_storage_pointers)] * depth
 
 
 @pytest.mark.parametrize("variant", VARIANTS)
@@ -236,9 +225,7 @@ def test_optimizer_contains_every_trainable_parameter_exactly_once(variant: str)
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
     model_parameter_ids = [id(parameter) for parameter in model.parameters()]
     optimizer_parameter_ids = [
-        id(parameter)
-        for group in optimizer.param_groups
-        for parameter in group["params"]
+        id(parameter) for group in optimizer.param_groups for parameter in group["params"]
     ]
 
     assert len(model_parameter_ids) == len(set(model_parameter_ids))

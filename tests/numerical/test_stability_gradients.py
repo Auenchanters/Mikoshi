@@ -16,9 +16,7 @@ def _model(variant: str) -> ControlledRecurrentTransformer:
     elif variant == "S3":
         config = stability_model_config(num_iterations=4, state_stabilization="initial_rms")
     elif variant == "S4":
-        config = stability_model_config(
-            num_iterations=4, input_anchoring=True, gated_update=True
-        )
+        config = stability_model_config(num_iterations=4, input_anchoring=True, gated_update=True)
     else:
         raise AssertionError(f"unknown test variant {variant}")
     model = ControlledRecurrentTransformer(config)
