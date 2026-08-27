@@ -1,0 +1,50 @@
+experiment:
+  run_id: EXP-0638-initial-rms-r8
+  description: Task 06 S3 initial-RMS stabilization with eight iterations
+  dataset_version: generated-tiny-corpus-v1
+tokenizer:
+  kind: bpe
+  vocab_size: 300
+  min_frequency: 2
+data:
+  sequence_length: 32
+  batch_size: 4
+  stride: 16
+model:
+  vocab_size: 300
+  max_seq_len: 32
+  d_model: 48
+  num_heads: 4
+  num_kv_heads: 2
+  d_ff: 128
+  num_prelude_layers: 1
+  num_core_layers: 1
+  num_coda_layers: 1
+  num_iterations: 8
+  max_iterations: 8
+  dropout: 0.0
+  rope_base: 10000.0
+  qk_norm: true
+  tie_embeddings: true
+  input_anchoring: false
+  gated_update: false
+  state_stabilization: initial_rms
+optimizer:
+  learning_rate: 0.003
+  betas: [0.9, 0.95]
+  weight_decay: 0.0
+  grad_clip: 1.0
+scheduler:
+  warmup_steps: 3
+  total_steps: 40
+  min_lr_ratio: 0.1
+runtime:
+  seed: 17
+  device: cpu
+  precision: fp32
+  deterministic: true
+  log_every: 1
+  eval_every: 20
+checkpoint:
+  save_every: 20
+  keep_last: 2
