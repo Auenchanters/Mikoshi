@@ -11,15 +11,18 @@ from aurora.training.recurrent_metrics import collect_core_gradient_statistics
 
 
 def test_recurrent_state_statistics_match_hand_derived_values() -> None:
+    initial = torch.tensor([[[0.0, 1.0]]])
     previous = torch.tensor([[[1.0, 0.0]]])
     current = torch.tensor([[[0.0, 2.0]]])
 
-    measured = measure_recurrent_state(previous, current, iteration=1)
+    measured = measure_recurrent_state(initial, previous, current, iteration=1)
 
     assert measured.iteration == 1
     assert measured.hidden_state_rms == pytest.approx(math.sqrt(2.0))
     assert measured.recurrent_update_rms == pytest.approx(math.sqrt(2.5))
     assert measured.state_cosine_similarity == pytest.approx(0.0)
+    assert measured.initial_state_cosine_similarity == pytest.approx(1.0)
+    assert measured.relative_update_magnitude == pytest.approx(math.sqrt(1.25))
 
 
 def test_core_gradient_statistics_match_literal_gradient() -> None:

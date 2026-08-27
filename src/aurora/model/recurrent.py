@@ -96,6 +96,7 @@ class FixedLoopRecurrentTransformer(nn.Module):
         self._validate_inputs(input_ids, targets)
         hidden = self.embedding_dropout(self.token_embedding(input_ids))
         hidden = self.prelude(hidden)
+        initial_state = hidden
         diagnostics: list[RecurrentStateDiagnostics] = []
         recurrent_states = [hidden] if retain_iteration_states else []
         for iteration in range(self.config.num_iterations):
@@ -103,7 +104,12 @@ class FixedLoopRecurrentTransformer(nn.Module):
             hidden = self.core(previous, iteration=iteration)
             if collect_diagnostics:
                 diagnostics.append(
-                    measure_recurrent_state(previous, hidden, iteration=iteration + 1)
+                    measure_recurrent_state(
+                        initial_state,
+                        previous,
+                        hidden,
+                        iteration=iteration + 1,
+                    )
                 )
             if retain_iteration_states:
                 recurrent_states.append(hidden)

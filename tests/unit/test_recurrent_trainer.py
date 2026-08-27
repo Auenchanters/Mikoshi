@@ -83,6 +83,9 @@ def test_recurrent_trainer_logs_state_and_core_gradient_diagnostics(tmp_path: Pa
     record = records[0]
     assert record["recurrent_iterations"] == 2
     assert len(record["recurrent_diagnostics"]) == 2
+    for diagnostic in record["recurrent_diagnostics"]:
+        assert "initial_state_cosine_similarity" in diagnostic
+        assert "relative_update_magnitude" in diagnostic
     assert record["gradient_norm"] > 0.0
     assert record["core_gradient_l2_norm"] > 0.0
     assert record["core_gradient_finite"] is True
