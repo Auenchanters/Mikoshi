@@ -110,7 +110,9 @@
 - **Actual result:** all gates passed in the 66-test suite. R=1/2/4/8 each had
   91,152 trainable parameters and identical state-dict key sets. All four tiny
   recurrent runs decreased training loss and reproduced their saved model and
-  evaluation loss exactly after fresh CPU fp32 checkpoint reload.
+  evaluation loss exactly after fresh CPU fp32 checkpoint reload. Detached
+  instrumentation also recorded cosine to the initial recurrent state and
+  `||h_t-h_{t-1}|| / ||h_t||` without changing logits or loss.
 - **Interpretation:** the fixed-loop implementation is a valid engineering
   control for recurrence. It does not establish a recurrence benefit.
 - **Hypothesis survives:** yes as an implementation/control hypothesis only.
@@ -133,7 +135,9 @@
   from 0.8795720809 for B0 to 0.1584378633 for R=8.
 - **Interpretation:** no recurrent configuration demonstrated a controlled
   advantage over B0 because neither parameter nor FLOP matching was performed.
-  The single-seed repeated-corpus run is an engineering diagnostic, not a model
-  comparison.
+  Deeper naïve recurrence degraded performance in this experiment despite its
+  additional active compute. The single-seed repeated-corpus run is an
+  engineering diagnostic, not a general model comparison, and the unmatched
+  R=1 raw loss must not be described as beating B0.
 - **Hypothesis survives:** yes; all future claims require matched controls and
   multiple seeds.

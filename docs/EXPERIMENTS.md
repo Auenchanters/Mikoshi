@@ -60,7 +60,8 @@ compute, general language quality, or AURORA performance is supported.
 
 ### Shared protocol
 
-- **Git commit:** `48b157805ff423922b6ae55e1f1525d34b04dbbc`
+- **B0 Git commit:** `48b157805ff423922b6ae55e1f1525d34b04dbbc`
+- **Recurrent-run Git commit:** `98220bf039b5d04761c9eb01033c44640c6daf3e`
 - **Commands:** `aurora-tiny --config configs/task05/b0_dense.yaml --runs-dir runs`
   and `aurora-recurrent --config configs/task05/recurrent_{1,2,4,8}.yaml
   --runs-dir runs`
@@ -99,10 +100,10 @@ accuracy or efficiency claim.
 | Run | Active FLOPs/token | Training GFLOPs | Loss drop/GFLOP | Tokens/s | Wall time (s) | Peak VRAM |
 |---|---:|---:|---:|---:|---:|---:|
 | B0 | 142,464 | 2.18824704 | 0.8795720809 | 9,623.0165 | 0.5320577 | unavailable |
-| R=1 | 199,296 | 3.06118656 | 0.6553686807 | 7,158.6385 | 0.7152198 | unavailable |
-| R=2 | 256,128 | 3.93412608 | 0.4820877646 | 5,848.0755 | 0.8755017 | unavailable |
-| R=4 | 369,792 | 5.68000512 | 0.2878887476 | 4,230.7675 | 1.2101823 | unavailable |
-| R=8 | 597,120 | 9.17176320 | 0.1584378633 | 2,971.3817 | 1.7231041 | unavailable |
+| R=1 | 199,296 | 3.06118656 | 0.6553686807 | 7,842.2086 | 0.6528773 | unavailable |
+| R=2 | 256,128 | 3.93412608 | 0.4820877646 | 6,824.4737 | 0.7502410 | unavailable |
+| R=4 | 369,792 | 5.68000512 | 0.2878887476 | 4,789.3092 | 1.0690477 | unavailable |
+| R=8 | 597,120 | 9.17176320 | 0.1584378633 | 3,166.0777 | 1.6171429 | unavailable |
 
 ### Gradient outcomes
 
@@ -122,36 +123,40 @@ elements at the final step.
 
 ### Final-step recurrent-state diagnostics
 
-Norms are RMS values. Cosine is the mean per-example cosine similarity between
-successive flattened states.
+Norms are RMS values. Cosines are mean per-example similarities between
+flattened states. Relative update is the exact global L2 ratio
+`||h_t-h_{t-1}|| / ||h_t||`. Diagnostic collection is detached,
+output-neutral, and deterministic under the recorded CPU fp32 conditions.
 
-| Run | Iteration | Hidden-state RMS | Update RMS | Successive-state cosine |
-|---|---:|---:|---:|---:|
-| R=1 | 1 | 0.1055833250 | 0.0423967540 | 0.9288075566 |
-| R=2 | 1 | 0.1063502580 | 0.0392616801 | 0.9389828444 |
-| R=2 | 2 | 0.1361574531 | 0.0451650880 | 0.9599708319 |
-| R=4 | 1 | 0.1614000350 | 0.0647321716 | 0.9283083677 |
-| R=4 | 2 | 0.2128396183 | 0.0734026954 | 0.9595167637 |
-| R=4 | 3 | 0.2714299262 | 0.0721892118 | 0.9841122627 |
-| R=4 | 4 | 0.3238864541 | 0.0624082386 | 0.9936016798 |
-| R=8 | 1 | 0.1714783907 | 0.0795602128 | 0.9037932754 |
-| R=8 | 2 | 0.2587973773 | 0.1152451262 | 0.9334675074 |
-| R=8 | 3 | 0.3744523227 | 0.1326087862 | 0.9768995047 |
-| R=8 | 4 | 0.4958645105 | 0.1318707019 | 0.9926722040 |
-| R=8 | 5 | 0.6233661771 | 0.1360260695 | 0.9963927865 |
-| R=8 | 6 | 0.7528877258 | 0.1365506798 | 0.9980368614 |
-| R=8 | 7 | 0.8819421530 | 0.1353005916 | 0.9987708926 |
-| R=8 | 8 | 1.0111789703 | 0.1345700920 | 0.9992300272 |
+| Run | Iteration | Hidden-state RMS | Update RMS | Cosine to previous | Cosine to h0 | Relative update |
+|---|---:|---:|---:|---:|---:|---:|
+| R=1 | 1 | 0.1055833250 | 0.0423967540 | 0.9288075566 | 0.9288075566 | 0.4015478194 |
+| R=2 | 1 | 0.1063502580 | 0.0392616801 | 0.9389828444 | 0.9389828444 | 0.3691733181 |
+| R=2 | 2 | 0.1361574531 | 0.0451650880 | 0.9599708319 | 0.8452925682 | 0.3317122459 |
+| R=4 | 1 | 0.1614000350 | 0.0647321716 | 0.9283083677 | 0.9283083677 | 0.4010666609 |
+| R=4 | 2 | 0.2128396183 | 0.0734026954 | 0.9595167637 | 0.8102678061 | 0.3448732495 |
+| R=4 | 3 | 0.2714299262 | 0.0721892118 | 0.9841122627 | 0.7185750008 | 0.2659589350 |
+| R=4 | 4 | 0.3238864541 | 0.0624082386 | 0.9936016798 | 0.6662002206 | 0.1926855445 |
+| R=8 | 1 | 0.1714783907 | 0.0795602128 | 0.9037932754 | 0.9037932754 | 0.4639664590 |
+| R=8 | 2 | 0.2587973773 | 0.1152451262 | 0.9334675074 | 0.7228146791 | 0.4453102946 |
+| R=8 | 3 | 0.3744523227 | 0.1326087862 | 0.9768995047 | 0.5939795971 | 0.3541406691 |
+| R=8 | 4 | 0.4958645105 | 0.1318707019 | 0.9926722050 | 0.5215638876 | 0.2659409940 |
+| R=8 | 5 | 0.6233661771 | 0.1360260695 | 0.9963927865 | 0.4780544043 | 0.2182121277 |
+| R=8 | 6 | 0.7528877258 | 0.1365506798 | 0.9980368614 | 0.4459280074 | 0.1813692600 |
+| R=8 | 7 | 0.8819421530 | 0.1353005916 | 0.9987708926 | 0.4202508628 | 0.1534121186 |
+| R=8 | 8 | 1.0111789703 | 0.1345700920 | 0.9992300272 | 0.4045824409 | 0.1330823600 |
 
 ### Interpretation and limitations
 
 R=1 has the lowest raw evaluation loss, but it also has 39.53% more trainable
 parameters and 39.89% more active FLOPs/token than B0. It is therefore not an
-improvement claim. R=2/4/8 used progressively more active compute while their
-evaluation losses worsened in this run. The increasing hidden-state RMS and
-cosine values at R=8 show growing state magnitude with increasingly aligned
-successive updates; this is a diagnostic observation, not proof of instability,
-convergence, or overthinking.
+improvement claim. Deeper naïve recurrence degraded performance in this
+experiment: R=2/4/8 used progressively more active compute while evaluation
+loss worsened monotonically relative to R=1. At R=8, cosine to h0 fell from
+0.9038 to 0.4046 while hidden-state RMS rose from 0.1715 to 1.0112; meanwhile,
+successive-state cosine approached 0.9992 and relative update fell to 0.1331.
+These are diagnostic observations, not proof of instability, convergence, or
+overthinking.
 
 The sweep has one seed, a 65K–91K parameter scale, only 5,120 training tokens,
 a repeated generated corpus, evaluation from the same pattern family, and no

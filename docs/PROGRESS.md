@@ -52,9 +52,12 @@ branch.
 - finite nonzero gradients through every retained state in an R=4 trajectory;
 - bitwise deterministic recurrent states, logits, and loss on repeated CPU fp32
   forwards;
-- output-neutral per-iteration state diagnostics and pre-clip core-gradient
-  statistics;
+- output-neutral per-iteration hidden/update norms, successive-state cosine,
+  cosine to the initial recurrent state, relative-update magnitude, and
+  pre-clip core-gradient statistics;
 - production-BPE B0/R1/R2/R4/R8 controlled sweep with exact checkpoint reload.
+- negative experimental result retained: deeper naïve R=2/4/8 recurrence used
+  more active compute and degraded evaluation loss monotonically versus R=1.
 
 ## Verification snapshot
 
@@ -72,8 +75,9 @@ branch.
 
 ## Deliberately deferred
 
-- broader Task 06 recurrence analysis/instrumentation beyond the mandatory Task
-  05 norm/update/cosine and core-gradient observations;
+- broader Task 06 recurrence analysis/instrumentation beyond the recorded Task
+  05 norm/update/cosine-to-previous/cosine-to-h0/relative-update and
+  core-gradient observations;
 - recurrence-stability experiments and regularization;
 - scratch/state highways;
 - persistent neural memory;
