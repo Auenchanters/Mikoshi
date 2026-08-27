@@ -25,6 +25,8 @@ dev = [
 
 [project.scripts]
 aurora-recurrent = "aurora.cli.recurrent_tiny:main"
+aurora-stability = "aurora.cli.stability_tiny:main"
+aurora-stability-cross-depth = "aurora.cli.stability_cross_depth:main"
 aurora-tiny = "aurora.cli.tiny:main"
 
 [tool.setuptools.packages.find]
