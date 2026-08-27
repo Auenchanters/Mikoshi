@@ -37,6 +37,26 @@ class InputAnchor(nn.Module):
         return recurrent_state + self.projection(initial_state)
 
 
+class InitialRMSStabilizer(nn.Module):
+    def __init__(self, norm_eps: float) -> None:
+        super().__init__()
+        self.norm_eps = norm_eps
+
+    def forward(self, initial: Tensor, candidate: Tensor) -> Tensor:
+        initial_rms = self._rms(initial)
+        candidate_rms = self._rms(candidate)
+        scale = initial_rms / candidate_rms.clamp_min(self.norm_eps)
+        return candidate * scale.to(candidate.dtype)
+
+    @staticmethod
+    def _rms(tensor: Tensor) -> Tensor:
+        fp32_tensor = tensor.float()
+        maximum = fp32_tensor.abs().amax(dim=-1, keepdim=True)
+        denominator = maximum.clamp_min(torch.finfo(fp32_tensor.dtype).tiny)
+        normalized = fp32_tensor / denominator
+        return maximum * torch.sqrt(normalized.square().mean(dim=-1, keepdim=True))
+
+
 class GatedRecurrentUpdate(nn.Module):
     def __init__(self, d_model: int) -> None:
         super().__init__()
@@ -78,8 +98,10 @@ class ControlledRecurrentTransformer(FixedLoopRecurrentTransformer):
         self.stability_config = config
         if config.input_anchoring:
             self.input_anchor = InputAnchor(config.d_model)
-        if config.variant == "S2":
+        if config.gated_update:
             self.gated_update = GatedRecurrentUpdate(config.d_model)
+        if config.variant == "S3":
+            self.state_stabilizer = InitialRMSStabilizer(config.norm_eps)
 
     def forward(
         self,
@@ -103,10 +125,16 @@ class ControlledRecurrentTransformer(FixedLoopRecurrentTransformer):
                 iteration_diagnostics=output.iteration_diagnostics,
                 recurrent_states=output.recurrent_states,
             )
-        if self.stability_config.variant not in {"S1", "S2"} or num_iterations_override is not None:
-            raise NotImplementedError(
-                "controlled recurrent mechanisms are implemented in later tasks"
-            )
+        num_iterations = self.config.num_iterations
+        if num_iterations_override is not None:
+            if (
+                type(num_iterations_override) is not int
+                or not 1 <= num_iterations_override <= self.config.max_iterations
+            ):
+                raise ValueError(
+                    "num_iterations_override must be an integer within [1, max_iterations]"
+                )
+            num_iterations = num_iterations_override
         self._validate_inputs(input_ids, targets)
         hidden = self.embedding_dropout(self.token_embedding(input_ids))
         hidden = self.prelude(hidden)
@@ -114,18 +142,20 @@ class ControlledRecurrentTransformer(FixedLoopRecurrentTransformer):
         diagnostics = []
         gate_diagnostics = []
         recurrent_states = [hidden] if retain_iteration_states else []
-        for iteration in range(self.config.num_iterations):
+        for iteration in range(num_iterations):
             previous = hidden
             core_input = (
                 self.input_anchor(initial_state, previous)
-                if self.stability_config.variant == "S1"
+                if self.stability_config.input_anchoring
                 else previous
             )
             proposal = self.core(core_input, iteration=iteration)
-            if self.stability_config.variant == "S2":
+            if self.stability_config.gated_update:
                 hidden, gate = self.gated_update(previous, proposal)
                 if collect_diagnostics:
                     gate_diagnostics.append(measure_recurrent_gate(gate, iteration=iteration + 1))
+            elif self.stability_config.variant == "S3":
+                hidden = self.state_stabilizer(initial_state, proposal)
             else:
                 hidden = proposal
             if collect_diagnostics:
