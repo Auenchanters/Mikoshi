@@ -20,13 +20,17 @@ _INDEPENDENT_RUNS = [
     ("s3_initial_rms_r4.yaml", "EXP-0634-initial-rms-r4", 4, "S3"),
     ("s3_initial_rms_r8.yaml", "EXP-0638-initial-rms-r8", 8, "S3"),
 ]
+_COMBINED_RUNS = [
+    ("s4_anchor_gate_r4.yaml", "EXP-0644-anchor-gate-r4", 4, "S4"),
+    ("s4_anchor_gate_r8.yaml", "EXP-0648-anchor-gate-r8", 8, "S4"),
+]
 
 
 @pytest.mark.parametrize(
     ("filename", "run_id", "depth", "variant"),
-    _INDEPENDENT_RUNS,
+    _INDEPENDENT_RUNS + _COMBINED_RUNS,
 )
-def test_task06_independent_config_preserves_matching_task05_protocol(
+def test_task06_config_preserves_matching_task05_protocol(
     filename: str,
     run_id: str,
     depth: int,
