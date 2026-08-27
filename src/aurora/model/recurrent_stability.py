@@ -44,17 +44,20 @@ class InitialRMSStabilizer(nn.Module):
 
     def forward(self, initial: Tensor, candidate: Tensor) -> Tensor:
         initial_rms = self._rms(initial)
-        candidate_rms = self._rms(candidate)
-        scale = initial_rms / candidate_rms.clamp_min(self.norm_eps)
-        return candidate * scale.to(candidate.dtype)
+        candidate_denominator = self._rms(candidate).clamp_min(self.norm_eps)
+        candidate_direction = (candidate.float() / candidate_denominator).to(candidate.dtype)
+        return candidate_direction * initial_rms.to(candidate.dtype)
 
     @staticmethod
     def _rms(tensor: Tensor) -> Tensor:
         fp32_tensor = tensor.float()
         maximum = fp32_tensor.abs().amax(dim=-1, keepdim=True)
-        denominator = maximum.clamp_min(torch.finfo(fp32_tensor.dtype).tiny)
+        denominator = torch.where(maximum > 0.0, maximum, torch.ones_like(maximum))
         normalized = fp32_tensor / denominator
-        return maximum * torch.sqrt(normalized.square().mean(dim=-1, keepdim=True))
+        normalized_rms = torch.linalg.vector_norm(
+            normalized, dim=-1, keepdim=True
+        ) / tensor.shape[-1] ** 0.5
+        return denominator * normalized_rms
 
 
 class GatedRecurrentUpdate(nn.Module):

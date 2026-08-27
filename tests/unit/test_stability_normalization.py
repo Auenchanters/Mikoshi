@@ -58,6 +58,56 @@ def test_initial_rms_stabilizer_keeps_extreme_finite_candidate_finite() -> None:
     assert torch.allclose(_per_token_rms(stabilized), _per_token_rms(initial), atol=1e-6)
 
 
+def test_initial_rms_stabilizer_preserves_subnormal_initial_rms() -> None:
+    component = torch.finfo(torch.float32).tiny / 2
+    initial = torch.full((1, 1, 4), component)
+    candidate = torch.ones_like(initial)
+
+    stabilized = InitialRMSStabilizer(norm_eps=1e-6)(initial, candidate)
+
+    assert torch.equal(stabilized, initial)
+
+
+@pytest.mark.parametrize("dtype", [torch.float32, torch.float16])
+@pytest.mark.parametrize(
+    ("initial_kind", "candidate_kind"),
+    [("maximum", "zero"), ("zero", "maximum")],
+)
+def test_initial_rms_stabilizer_keeps_combined_zero_and_extreme_inputs_finite(
+    dtype: torch.dtype, initial_kind: str, candidate_kind: str
+) -> None:
+    maximum = torch.finfo(dtype).max
+    initial = (
+        torch.full((1, 1, 4), maximum, dtype=dtype)
+        if initial_kind == "maximum"
+        else torch.zeros((1, 1, 4), dtype=dtype)
+    )
+    candidate = (
+        torch.full((1, 1, 4), maximum, dtype=dtype)
+        if candidate_kind == "maximum"
+        else torch.zeros((1, 1, 4), dtype=dtype)
+    )
+
+    stabilized = InitialRMSStabilizer(norm_eps=1e-6)(initial, candidate)
+
+    assert stabilized.dtype == dtype
+    assert torch.isfinite(stabilized).all()
+    assert torch.equal(stabilized, torch.zeros_like(stabilized))
+
+
+def test_initial_rms_stabilizer_has_finite_candidate_gradient_at_zero() -> None:
+    initial = torch.ones((1, 1, 4))
+    candidate = torch.zeros((1, 1, 4), requires_grad=True)
+
+    stabilized = InitialRMSStabilizer(norm_eps=1e-6)(initial, candidate)
+    stabilized.sum().backward()
+
+    assert torch.isfinite(stabilized).all()
+    assert candidate.grad is not None
+    assert torch.isfinite(candidate.grad).all()
+    assert float(candidate.grad.abs().sum()) > 0.0
+
+
 def test_initial_rms_stabilizer_has_no_parameters_or_persistent_state() -> None:
     stabilizer = InitialRMSStabilizer(norm_eps=1e-6)
 
